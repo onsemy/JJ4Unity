@@ -19,7 +19,16 @@ namespace JJ4Unity.Editor
 
         static JJ4UnityInitializer()
         {
+            JJ4UnityEditorConfig.Initialize();
+            
             StopServer();
+
+            if (false == JJ4UnityEditorConfig.IsConnectToVSCode)
+            {
+                Runtime.Extension.Debug.Log("Abort running JJ4Unity for VSCode server - JJ4UnityEditorConfig.IsConnectToVSCode is false.");
+                return;
+            }
+            
             StartServer();
 
             EditorApplication.quitting -= StopServer;
