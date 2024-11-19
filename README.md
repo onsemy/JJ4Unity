@@ -20,6 +20,38 @@ UnityEngine.Debug를 대체합니다. Scripting Define에 `__DEBUG__`가 선언�
 
 런타임 또는 에디터에서 `public` 또는 `[SerializeField]`로 선언된 멤버 변수를 자동으로 할당해주는 기능입니다.
 
+```csharp
+// 런타임에서 사용할 경우
+using JJ4Unity.Runtime.Attribute;
+using JJ4Unity.Runtime.Extension;
+
+public class SomeClass1 : MonoBehaviour
+{
+    [SerializeField, AssignPath] private SpriteRenderer _front;
+
+    private void Awake()
+    {
+        // 아래 함수를 반드시 실행해야 합니다.
+        this.AssignPaths();
+    }
+}
+```
+
+```csharp
+// 에디터에서 사용할 경우
+using JJ4Unity.Runtime.Attribute;
+
+public class SomeClass2 : MonoBehaviour
+{
+    [SerializeField, AssignPath(true)] private SpriteRenderer _front;
+}
+
+// 이후 Unity Editor에서 해당 컴포넌트가 추가된 게임 오브젝트를
+// 선택하여 인스펙터에서 [Assign Variables] 버튼을 누릅니다.
+```
+
+![](docs/2024-11-20-02-10-53.png)
+
 ### Visual Studio Code 연동
 
 Visual Studio Code를 코드 편집기로 사용하는 경우, [JJ4UnityVSC](https://github.com/onsemy/JJ4UnityVSC) 확장 프로그램을 설치한 이후 코드 편집기 내에서 C# 스크립트를 편집 후 저장하는 경우 Unity Editor가 자동으로 갱신되며 컴파일이 시작됩니다. (JetBrains Rider에서 제공하는 기능과 유사하다고 보시면 됩니다.)
