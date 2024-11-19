@@ -8,5 +8,6 @@
     "keywords": [ "plugin", "tools" ],
     "license": "MIT",
     "category": "Library",
-    "dependencies": {}
+    "dependencies": {},
+    "changelog": "CHANGELOG.md"
 }
