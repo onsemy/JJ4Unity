@@ -324,9 +324,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f7a1db384b67b8c4482e11ff931c4ba5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _gameObject: {fileID: 0}
-  _transform: {fileID: 1962658539}
+  _childGameObject: {fileID: 0}
+  _childTransform: {fileID: 1962658539}
   _light: {fileID: 0}
+  _readOnlyIntValue: 10
+  _publicStringValue: PublicStringValue
 --- !u!1 &1329404686
 GameObject:
   m_ObjectHideFlags: 0
@@ -337,7 +339,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1329404687}
   m_Layer: 0
-  m_Name: GameObject
+  m_Name: ChildGameObject
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -369,7 +371,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1962658539}
   m_Layer: 0
-  m_Name: Transform
+  m_Name: ChildTransform
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

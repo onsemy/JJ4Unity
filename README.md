@@ -8,6 +8,10 @@ Unity를 쓰면서 유용한 기능을 모은 저장소
 2. 다음 주소를 복사/붙여넣기 합니다.
     > `https://github.com/onsemy/JJ4Unity.git?path=Assets/JJ4Unity`
 
+## 예제 코드
+
+`Assets/Scenes/SampleScene.unity`에서 실행하여 확인 할 수 있습니다. 예제 코드는 `Assets/Test.cs`에서 확인 가능하고, `Test.cs`가 부착된 게임 오브젝트는 `Main Camera` 입니다.
+
 ## 주요 기능
 
 ### Debug
@@ -61,6 +65,20 @@ Visual Studio Code를 코드 편집기로 사용하는 경우, [JJ4UnityVSC](htt
 ### Singleton/MonoBehaviour Singleton
 
 일반적인 `Singleton<T>`과 MonoBehaviour를 위한 `MonoSingleton<T>`을 쓸 수 있습니다.
+
+### ReadOnly
+
+`public` 또는 `[SerializeField]`로 선언된 멤버 변수를 유니티 에디터의 인스펙터에서 수정할 수 없도록 합니다.
+
+```csharp
+using JJ4Unity.Runtime.Attribute;
+
+public class SomeClass3 : MonoBehaviour
+{
+    [SerializeField, ReadOnly] private int _readOnlyInt = 10;
+    [ReadOnly] public string _readOnlyStringValue = "ReadOnlyStringValue";
+}
+```
 
 ## 알려진 문제
 
