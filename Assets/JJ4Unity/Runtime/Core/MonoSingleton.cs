@@ -2,6 +2,8 @@ using UnityEngine;
 
 namespace JJ4Unity.Runtime.Core
 {
+	using Extension;
+	
     public class MonoSingleton<T> : MonoBehaviour where T : MonoBehaviour
     {
         private static object _lock = new object();

@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace JJ4Unity.Runtime.Extension
 {
-    using JJ4Unity.Runtime.Attribute;
+    using Attribute;
 
     public static class AssignPath
     {
@@ -70,7 +70,7 @@ namespace JJ4Unity.Runtime.Extension
                 var memberComponent = child.gameObject;
                 if (null == memberComponent)
                 {
-                    UnityEngine.Debug.LogError($"can't find component {child.name} GameObject");
+                    Debug.LogError($"can't find component {child.name} GameObject");
                     continue;
                 }
 
