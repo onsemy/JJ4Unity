@@ -14,6 +14,16 @@ Unity를 쓰면서 유용한 기능을 모은 저장소
 
 ## 주요 기능
 
+### Addressables 암/복호화 추가
+
+기본적인 Addressables는 암호화 및 복호화하지 않고 불러와서 애써 만든 소중한 에셋이 탈취 당할 가능성이 높습니다. 해커를 조금 귀찮게 해줄 암/복호화 기능을 추가했습니다. 프로젝트에서 사용하기 위해 다음과 같은 코드를 Addressables를 사용하기 전에 호출해주세요.
+
+> `JJ4Unity.Runtime.AssetBundle.AddressablesHelper.SetEncryptedProvider(new EncryptedAssetBundleProvider(AES_Key, AES_IV));`
+
+암/복호화 알고리즘은 AES로 되어 있으나, 원한다면 `EncryptedAssetBundleProvider`를 상속받아서 적용할 수 있습니다. 본인만의 클래스를 구현한 후, `SetEncryptedProvider()` 함수를 본인의 클래스를 넣어주세요.
+
+위와 같은 암/복호화를 사용하는 경우, Addressables 메뉴에서 제공하는 빌드가 아닌 직접 빌드 스크립트를 작성해야 합니다. JJ4Unity에서는 `JJ4Unity/Build AssetBundle` 메뉴를 통해 Addressables Groups에 설정된 번들을 빌드 및 암호화할 수 있습니다. AES Key 및 IV 설정은 `JJ4Unity/Open Encrypt AssetBundle Settings`에서 가능합니다.
+
 ### Debug
 
 UnityEngine.Debug를 대체합니다. Scripting Define에 `__DEBUG__`가 선언되어 있는 경우에만 출력됩니다. 로그를 호출하는 경우 다음과 같이 출력됩니다.

@@ -5,10 +5,15 @@ namespace JJ4Unity.Editor
     public static class JJ4UnityEditorConfig
     {
         public static bool IsConnectToVSCode { get; private set; }
+        
+        public static string AESKey { get; set; }
+        public static string AESIV { get; set; }
 
         public static void Initialize()
         {
             IsConnectToVSCode = EditorPrefs.GetBool(nameof(IsConnectToVSCode), true);
+            AESKey = EditorPrefs.GetString(nameof(AESKey), null);
+            AESIV = EditorPrefs.GetString(nameof(AESIV), null);
         }
         
         [MenuItem("JJ4Unity/Toggle Connect To VSCode")]
