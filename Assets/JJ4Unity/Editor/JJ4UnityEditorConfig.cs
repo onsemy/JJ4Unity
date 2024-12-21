@@ -1,3 +1,5 @@
+using JJ4Unity.Editor.AssetBundle;
+using JJ4Unity.Runtime.AssetBundle;
 using UnityEditor;
 
 namespace JJ4Unity.Editor
@@ -34,6 +36,13 @@ namespace JJ4Unity.Editor
         {
             Menu.SetChecked("JJ4Unity/Toggle Connect To VSCode", IsConnectToVSCode);
             return true;
+        }
+
+        [MenuItem("JJ4Unity/Open EncryptedAssetBundleSettings")]
+        public static void OpenEncryptedAssetBundleSettingsWindow()
+        {
+            var window = EditorWindow.GetWindow<EncryptedAssetBundleSettingsWindow>();
+            window.Show();
         }
     }
 }

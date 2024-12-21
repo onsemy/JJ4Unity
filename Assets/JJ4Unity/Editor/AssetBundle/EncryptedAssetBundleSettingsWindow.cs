@@ -14,8 +14,8 @@ namespace JJ4Unity.Editor.AssetBundle
 
             if (GUILayout.Button("Random Key/IV"))
             {
-                var keyBytes = new byte[16];
-                var ivBytes = new byte[16];
+                var keyBytes = new byte[12];
+                var ivBytes = new byte[12];
                 
                 using var rng = RandomNumberGenerator.Create();
                 rng.GetBytes(keyBytes);
