@@ -23,40 +23,24 @@ namespace JJ4Unity.Runtime.AssetBundle
 
         public override void Provide(ProvideHandle provideHandle)
         {
-            Debug.Log(
-                $"Try to provide AssetBundle - provideHandle.Location is null? {provideHandle}, key: {_key}, iv: {_iv}");
-            try
-            {
-                var internalId = provideHandle.Location.InternalId;
-                Debug.Log($"Loading encrypted asset bundle: {internalId}");
+            // Debug.Log($"Try to provide AssetBundle - provideHandle.Location is null? {provideHandle}, key: {_key}, iv: {_iv}");
+            var internalId = provideHandle.Location.InternalId;
+            Debug.Log($"Loading encrypted asset bundle: {internalId}");
 
-                if (internalId.StartsWith("jar:file://"))
-                {
-                    ProvideFromJarFile(provideHandle, internalId);
-                }
-                else
-                {
-                    ProvideFromFileStream(provideHandle, internalId);
-                }
-            }
-            catch (Exception e)
+            if (internalId.StartsWith("jar:file://"))
             {
-                Debug.LogError($"Failed to load encrypted AssetBundle: {e.Message}");
-                provideHandle.Complete<CustomAssetBundleResource>(null, false, e);
+                ProvideFromJarFile(provideHandle, internalId);
+            }
+            else
+            {
+                ProvideFromFileStream(provideHandle, internalId);
             }
         }
 
         private void ProvideFromFileStream(ProvideHandle provideHandle, string internalId)
         {
-            try
-            {
-                using var fileStream = new FileStream(internalId, FileMode.Open, FileAccess.Read);
-                DecryptBundle(provideHandle, fileStream);
-            }
-            catch (Exception e)
-            {
-                throw;
-            }
+            using var fileStream = new FileStream(internalId, FileMode.Open, FileAccess.Read);
+            DecryptBundle(provideHandle, fileStream);
         }
 
         private void ProvideFromJarFile(ProvideHandle provideHandle, string internalId)
@@ -74,19 +58,14 @@ namespace JJ4Unity.Runtime.AssetBundle
                 {
                     Debug.LogError($"Failed to load encrypted AssetBundle: {request.error}");
                     provideHandle.Complete<CustomAssetBundleResource>(null, false,
-                        new System.Exception($"Failed to load encrypted asset bundle: {internalId}"));
+                        new Exception($"Failed to load encrypted asset bundle: {internalId}"));
                     return;
                 }
 
                 try
                 {
                     var stream = streamDownloadHandler.GetStream();
-                    // var rawData = request.downloadHandler.data;
                     DecryptBundle(provideHandle, stream);
-                }
-                catch (Exception e)
-                {
-                    throw;
                 }
                 finally
                 {
@@ -97,11 +76,22 @@ namespace JJ4Unity.Runtime.AssetBundle
 
         private void DecryptBundle(ProvideHandle provideHandle, Stream stream)
         {
-            using var decryptedStream = DecryptDataToMemoryStream(stream);
+            try
+            {
+                using var decryptedStream = DecryptDataToMemoryStream(stream);
 
-            var bundle = UnityEngine.AssetBundle.LoadFromStream(decryptedStream);
-            var assetBundleResource = new CustomAssetBundleResource(bundle);
-            provideHandle.Complete(assetBundleResource, true, null);
+                var bundle = UnityEngine.AssetBundle.LoadFromStream(decryptedStream);
+                var assetBundleResource = new CustomAssetBundleResource(bundle);
+                provideHandle.Complete(assetBundleResource, true, null);
+            }
+            catch (CryptographicException e)
+            {
+                provideHandle.Complete<CustomAssetBundleResource>(null, false, e);
+            }
+            catch (Exception e)
+            {
+                provideHandle.Complete<CustomAssetBundleResource>(null, false, e);
+            }
         }
 
         private MemoryStream DecryptDataToMemoryStream(Stream encryptedStream)
@@ -112,7 +102,8 @@ namespace JJ4Unity.Runtime.AssetBundle
             aes.Padding = PaddingMode.PKCS7;
             aes.Mode = CipherMode.CBC;
 
-            using var cryptoStream = new CryptoStream(encryptedStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
+            using var cryptoStream =
+                new CryptoStream(encryptedStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
 
             var decryptedStream = new MemoryStream();
             cryptoStream.CopyTo(decryptedStream);
