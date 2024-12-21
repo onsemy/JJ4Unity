@@ -30,8 +30,8 @@ public class Test : MonoBehaviour
         Debug.Log($"Runtime Path: {Addressables.RuntimePath}");
         Addressables.ResourceManager.ResourceProviders.Add(
             new EncryptedAssetBundleProvider(
-                "dWG+4/YNKFJ/G2Kl", // NOTE(JJO): AES Key, IV는 암호화하여 넣는 것을 추천
-                "7dXQLo/xPort0/6f"
+                "0234567890abcdef", // NOTE(JJO): AES Key, IV는 따로 관리하는 것을 추천
+                "0234567890abcdef"
             )
         );
 
@@ -48,6 +48,7 @@ public class Test : MonoBehaviour
         yield return handle;
         if (handle.Status != AsyncOperationStatus.Succeeded)
         {
+            Debug.LogError($"Failed to load asset - Exception Message: {handle.OperationException?.Message}");
             yield break;
         }
 
