@@ -1,6 +1,7 @@
 using System.IO;
 using System.Security.Cryptography;
 using JJ4Unity.Runtime.AssetBundle;
+using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEngine;
@@ -12,12 +13,19 @@ namespace JJ4Unity.Editor.AssetBundle
     public class EncryptedBuildScript : BuildScriptPackedMode
     {
         public override string Name => "Encrypted Build Script";
+        private JJ4UnitySettings _settings;
 
         protected override TResult DoBuild<TResult>(
             AddressablesDataBuilderInput builderInput,
             AddressableAssetsBuildContext aaContext
         )
         {
+            _settings = LoadSettings();
+            if (null == _settings)
+            {
+                return default;
+            }
+            
             var result = base.DoBuild<TResult>(builderInput, aaContext);
 
             if (null == result.Error && result is AddressablesPlayerBuildResult buildResult)
@@ -43,12 +51,32 @@ namespace JJ4Unity.Editor.AssetBundle
             return result;
         }
 
+        private JJ4UnitySettings LoadSettings()
+        {
+            var guids = AssetDatabase.FindAssets($"t:{nameof(JJ4UnitySettings)}");
+            if (guids.Length == 0)
+            {
+                Debug.LogWarning($"{nameof(JJ4UnitySettings)} not found.");
+                return null;
+            }
+            
+            var path = AssetDatabase.GUIDToAssetPath(guids[0]);
+            var settings = AssetDatabase.LoadAssetAtPath<JJ4UnitySettings>(path);
+            if (null == settings)
+            {
+                Debug.LogWarning($"{nameof(JJ4UnitySettings)} not found.");
+                return null;
+            }
+
+            return settings;
+        }
+
         private void EncryptBuiltBundles(AddressablesPlayerBuildResult result)
         {
             var buildResults = result.AssetBundleBuildResults;
 
-            var key = System.Text.Encoding.UTF8.GetBytes(JJ4UnityEditorConfig.AESKey);
-            var iv = System.Text.Encoding.UTF8.GetBytes(JJ4UnityEditorConfig.AESIV);
+            var key = System.Text.Encoding.UTF8.GetBytes(_settings.AESKey);
+            var iv = System.Text.Encoding.UTF8.GetBytes(_settings.AESIV);
 
             foreach (var buildResult in buildResults)
             {

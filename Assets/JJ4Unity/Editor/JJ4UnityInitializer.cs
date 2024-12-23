@@ -4,6 +4,8 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System;
+using UnityEngine;
+using Debug = JJ4Unity.Runtime.Extension.Debug;
 
 namespace JJ4Unity.Editor
 {
@@ -19,13 +21,17 @@ namespace JJ4Unity.Editor
 
         static JJ4UnityInitializer()
         {
-            JJ4UnityEditorConfig.Initialize();
-            
             StopServer();
 
-            if (false == JJ4UnityEditorConfig.IsConnectToVSCode)
+            var settings = LoadJJ4UnitySettings();
+            if (null == settings)
             {
-                Runtime.Extension.Debug.Log("Abort running JJ4Unity for VSCode server - JJ4UnityEditorConfig.IsConnectToVSCode is false.");
+                return;
+            }
+
+            if (false == settings.IsConnectToVSCode)
+            {
+                Debug.Log("Abort running JJ4Unity for VSCode server - JJ4UnitySettings.IsConnectToVSCode is false.");
                 return;
             }
             
@@ -51,7 +57,7 @@ namespace JJ4Unity.Editor
         {
             if (_isRunning && null != _listener)
             {
-                Runtime.Extension.Debug.LogWarning("JJ4Unity for VSCode Server is already running!");
+                Debug.LogWarning("JJ4Unity for VSCode Server is already running!");
                 return;
             }
 
@@ -87,7 +93,7 @@ namespace JJ4Unity.Editor
             _serverThread.IsBackground = true;
             _serverThread.Start();
 
-            Runtime.Extension.Debug.Log("Try to run a server about JJ4Unity for VSCode.");
+            Debug.Log("Try to run a server about JJ4Unity for VSCode.");
         }
 
         private static void StopServer()
@@ -98,7 +104,43 @@ namespace JJ4Unity.Editor
             _serverThread?.Abort();
             _serverThread = null;
 
-            Runtime.Extension.Debug.Log("JJ4Unity for VSCode Server is stopped.");
+            Debug.Log("JJ4Unity for VSCode Server is stopped.");
+        }
+
+        private static JJ4UnitySettings LoadJJ4UnitySettings()
+        {
+            var guids = AssetDatabase.FindAssets($"t:{nameof(JJ4UnitySettings)}");
+            if (guids.Length == 0)
+            {
+                Debug.LogWarning($"{nameof(JJ4UnitySettings)} not found.");
+                return null;
+            }
+            
+            var path = AssetDatabase.GUIDToAssetPath(guids[0]);
+            var settings = AssetDatabase.LoadAssetAtPath<JJ4UnitySettings>(path);
+            if (null == settings)
+            {
+                Debug.LogWarning($"{nameof(JJ4UnitySettings)} not found.");
+                return null;
+            }
+
+            return settings;
+        }
+
+        [MenuItem("JJ4Unity/Create JJ4Unity Settings in Assets")]
+        private static void CreateJJ4UnitySettings()
+        {
+            var settings = LoadJJ4UnitySettings();
+            if (null != settings)
+            {
+                EditorUtility.DisplayDialog("JJ4Unity", "JJ4Unity settings already exists.", "OK");
+                EditorGUIUtility.PingObject(settings);
+                return;
+            }
+            
+            settings = ScriptableObject.CreateInstance<JJ4UnitySettings>();
+            AssetDatabase.CreateAsset(settings, "Assets/JJ4UnitySettings.asset");
+            AssetDatabase.SaveAssets();
         }
     }
 }

@@ -30,16 +30,33 @@ public class Test : MonoBehaviour
         Debug.Log($"Runtime Path: {Addressables.RuntimePath}");
         Addressables.ResourceManager.ResourceProviders.Add(
             new EncryptedAssetBundleProvider(
-                "0234567890abcdef", // NOTE(JJO): AES Key, IV는 따로 관리하는 것을 추천
-                "0234567890abcdef"
+                "1234567890abcdef", // NOTE(JJO): AES Key, IV는 따로 관리하는 것을 추천
+                "1234567890abcdef"
             )
         );
 
+        yield return InitializeAddressables();
+        
         Debug.Log($"_childGameObject is null? {_childGameObject == null}");
         Debug.Log($"_childTransform is null? {_childTransform == null}");
         Debug.Log($"_light is null? {_light == null}");
 
         yield return LoadAddressables();
+    }
+
+    private IEnumerator InitializeAddressables()
+    {
+        var handle = Addressables.InitializeAsync(false);
+        yield return handle;
+
+        if (handle.Status != AsyncOperationStatus.Succeeded)
+        {
+            Debug.LogError($"InitializeAddressables failed: {handle.Status}");
+            yield break;
+        }
+        
+        Debug.Log($"Initialize Addressables");
+        Addressables.Release(handle);
     }
 
     private IEnumerator LoadAddressables()
