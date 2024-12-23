@@ -26,6 +26,7 @@ namespace JJ4Unity.Editor
             var settings = LoadJJ4UnitySettings();
             if (null == settings)
             {
+                Debug.LogWarning($"{nameof(JJ4UnitySettings)} not found. Try to `[JJ4Unity]->[Create JJ4Unity Settings in Assets]`");
                 return;
             }
 

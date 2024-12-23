@@ -56,7 +56,13 @@ namespace JJ4Unity.Editor.AssetBundle
             var guids = AssetDatabase.FindAssets($"t:{nameof(JJ4UnitySettings)}");
             if (guids.Length == 0)
             {
-                Debug.LogWarning($"{nameof(JJ4UnitySettings)} not found.");
+                var message =
+                    $"{nameof(JJ4UnitySettings)} not found.\n\nTry to `[JJ4Unity]->[Create JJ4Unity Settings in Assets]`";
+                if (false == Application.isBatchMode)
+                {
+                    EditorUtility.DisplayDialog("Error", message, "OK");
+                }
+                Debug.LogError(message);
                 return null;
             }
             
@@ -64,7 +70,13 @@ namespace JJ4Unity.Editor.AssetBundle
             var settings = AssetDatabase.LoadAssetAtPath<JJ4UnitySettings>(path);
             if (null == settings)
             {
-                Debug.LogWarning($"{nameof(JJ4UnitySettings)} not found.");
+                var message =
+                    $"{nameof(JJ4UnitySettings)} not found.\n\nTry to `[JJ4Unity]->[Create JJ4Unity Settings in Assets]`";
+                if (false == Application.isBatchMode)
+                {
+                    EditorUtility.DisplayDialog("Error", message, "OK");
+                }
+                Debug.LogError(message);
                 return null;
             }
 
