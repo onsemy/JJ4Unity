@@ -5,7 +5,10 @@ using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEngine;
+using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
+using Debug = JJ4Unity.Runtime.Extension.Debug;
 
 namespace JJ4Unity.Editor.AssetBundle
 {
@@ -26,26 +29,18 @@ namespace JJ4Unity.Editor.AssetBundle
                 return default;
             }
             
+            // TODO(JJO): base.DoBuild하기 전에 aaContent를 수정해야 함.
+            //
+            
             var result = base.DoBuild<TResult>(builderInput, aaContext);
 
-            if (null == result.Error && result is AddressablesPlayerBuildResult buildResult)
+            if (null == result.Error
+                && result is AddressablesPlayerBuildResult buildResult
+            )
             {
                 EncryptBuiltBundles(buildResult);
 
-                var originDirectoryPath = Path.GetDirectoryName(buildResult.OutputPath);
-                var targetDirectoryPath = Path.GetDirectoryName(buildResult.AssetBundleBuildResults[0].FilePath);
-                if (false == string.IsNullOrEmpty(originDirectoryPath) &&
-                    false == string.IsNullOrEmpty(targetDirectoryPath)
-                )
-                {
-                    var originCatalogPath = Path.Combine(originDirectoryPath, "catalog.json");
-                    var targetCatalogPath = Path.Combine(targetDirectoryPath, "catalog.json.tmp");
-
-                    ModifyContentCatalog(originCatalogPath, targetCatalogPath);
-                    
-                    File.Delete(originCatalogPath);
-                    File.Move(targetCatalogPath, originCatalogPath);
-                }
+                ModifyContentCatalog(buildResult);
             }
 
             return result;
@@ -117,24 +112,96 @@ namespace JJ4Unity.Editor.AssetBundle
             inputStream.CopyTo(cryptoStream);
         }
 
-        private void ModifyContentCatalog(string originPath, string targetPath)
+        private void ModifyContentCatalog(AddressablesPlayerBuildResult buildResult)
         {
-            if (false == File.Exists(originPath))
+            var originDirectoryPath = Path.GetDirectoryName(buildResult.OutputPath);
+            if (string.IsNullOrEmpty(originDirectoryPath))
             {
-                Debug.LogError($"Catalog file does not exist: {originPath}");
                 return;
             }
 
-            using var reader = new StreamReader(originPath);
-            var catalogJson = reader.ReadToEnd();
-            var updatedJson = catalogJson.Replace(
-                typeof(AssetBundleProvider).FullName!,
-                typeof(EncryptedAssetBundleProvider).FullName);
+            ModifyContentCatalogFromJson(originDirectoryPath);
 
-            using var writer = new StreamWriter(targetPath, false);
-            writer.Write(updatedJson);
+            ModifyContentCatalogFromBinary(originDirectoryPath);
+        }
 
-            Debug.Log($"Content Catalog updated with EncryptedAssetBundleProvider: {targetPath}");
+        private static bool ModifyContentCatalogFromJson(string originDirectoryPath)
+        {
+            var originCatalogPath = Path.Combine(originDirectoryPath, "catalog.json");
+            if (false == File.Exists(originCatalogPath))
+            {
+                return false;
+            }
+
+            var targetCatalogPath = $"{originCatalogPath}.tmp";
+
+            using (var reader = new StreamReader(originCatalogPath))
+            {
+                var catalogJson = reader.ReadToEnd();
+                var updatedJson = catalogJson.Replace(
+                    typeof(AssetBundleProvider).FullName!,
+                    typeof(EncryptedAssetBundleProvider).FullName);
+
+                using var writer = new StreamWriter(targetCatalogPath, false);
+                writer.Write(updatedJson);
+            }
+
+            File.Delete(originCatalogPath);
+            File.Move(targetCatalogPath, originCatalogPath);
+
+            Debug.Log($"Content Catalog updated with EncryptedAssetBundleProvider: {originCatalogPath}");
+
+            return true;
+        }
+        
+        private static bool ModifyContentCatalogFromBinary(string originDirectoryPath)
+        {
+            var originCatalogPath = Path.Combine(originDirectoryPath, "catalog.bin");
+            if (false == File.Exists(originCatalogPath))
+            {
+                originCatalogPath = Path.Combine(originDirectoryPath, "catalog.bundle");
+            }
+
+            if (false == File.Exists(originCatalogPath))
+            {
+                return false;
+            }
+
+            var targetCatalogPath = $"{originCatalogPath}.tmp";
+            
+            using (var readFileStream = new FileStream(originCatalogPath, FileMode.Open, FileAccess.Read))
+            {
+                var formatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+                var catalog = (ContentCatalogData)formatter.Deserialize(readFileStream);
+                for (int i = catalog.ResourceProviderData.Count; i >= 0; i--)
+                {
+                    if (catalog.ResourceProviderData[i].Id == typeof(AssetBundleProvider).FullName)
+                    {
+                        var resource = ObjectInitializationData.CreateSerializedInitializationData(typeof(EncryptedAssetBundleProvider));
+                        catalog.ResourceProviderData.RemoveAt(i);
+                        catalog.ResourceProviderData.Add(resource);
+                    }
+                }
+
+                for (int i = catalog.ProviderIds.Length; i >= 0; i--)
+                {
+                    if (catalog.ProviderIds[i] == typeof(AssetBundleProvider).FullName)
+                    {
+                        catalog.ProviderIds[i] = typeof(EncryptedAssetBundleProvider).FullName;
+                    }
+                }
+
+                using var writeFileStream = new FileStream(targetCatalogPath, FileMode.Create, FileAccess.Write);
+                var writeFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+                writeFormatter.Serialize(writeFileStream, catalog);
+            }
+
+            File.Delete(originCatalogPath);
+            File.Move(targetCatalogPath, originCatalogPath);
+
+            Debug.Log($"Content Catalog updated with EncryptedAssetBundleProvider: {originCatalogPath}");
+
+            return true;
         }
     }
 }
