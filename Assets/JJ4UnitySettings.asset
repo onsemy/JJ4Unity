@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: JJ4UnitySettings
   m_EditorClassIdentifier: 
   _isConnectToVSCode: 0
-  _aesKey: 
-  _aesIV: 
+  _aesKey: 1234567890abcdef
+  _aesIV: 1234567890abcdef

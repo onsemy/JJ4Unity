@@ -78,6 +78,12 @@ namespace JJ4Unity.Editor
                 _settings.AESIV = Convert.ToBase64String(ivBytes);
             }
             EditorGUI.indentLevel--;
+
+            if (GUI.changed)
+            {
+                EditorUtility.SetDirty(target);
+                AssetDatabase.SaveAssets();
+            }
         }
     }
 }
