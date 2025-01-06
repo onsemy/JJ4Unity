@@ -2,11 +2,11 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 
 namespace JJ4Unity.Runtime.AssetBundle
 {
-    public class CustomAssetBundleResource : IAssetBundleResource
+    public class DecryptedBundleResource : IAssetBundleResource
     {
         private UnityEngine.AssetBundle _assetBundle;
 
-        public CustomAssetBundleResource(UnityEngine.AssetBundle assetBundle)
+        public DecryptedBundleResource(UnityEngine.AssetBundle assetBundle)
         {
             _assetBundle = assetBundle;
         }

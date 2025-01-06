@@ -1,11 +1,14 @@
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using JJ4Unity.Runtime.AssetBundle;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine;
+using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
@@ -38,7 +41,11 @@ namespace JJ4Unity.Editor.AssetBundle
             {
                 EncryptBuiltBundles(buildResult);
 
-                ModifyContentCatalog(buildResult, aaContext);
+                var originDirectoryPath = Path.GetDirectoryName(buildResult.OutputPath);
+                if (false == string.IsNullOrEmpty(originDirectoryPath))
+                {
+                    ModifyContentCatalog(originDirectoryPath, aaContext);
+                }
             }
 
             return result;
@@ -113,26 +120,24 @@ namespace JJ4Unity.Editor.AssetBundle
         }
 
         private void ModifyContentCatalog(
-            AddressablesPlayerBuildResult buildResult,
+            string originDirectoryPath,
             AddressableAssetsBuildContext aaContext
         )
         {
-            var originDirectoryPath = Path.GetDirectoryName(buildResult.OutputPath);
-            if (string.IsNullOrEmpty(originDirectoryPath))
-            {
-                return;
-            }
-
 #if ENABLE_JSON_CATALOG
             // NOTE(JJO): catalog.json
-            ModifyContentCatalogFromJson(originDirectoryPath);
+            ModifyContentCatalogFromJson(originDirectoryPath, aaContext);
 #else
             // NOTE(JJO): catalog.bin
             ModifyContentCatalogFromBinary(originDirectoryPath, aaContext);
 #endif
         }
 
-        private static void ModifyContentCatalogFromJson(string originDirectoryPath)
+#if ENABLE_JSON_CATALOG
+        private void ModifyContentCatalogFromJson(
+            string originDirectoryPath,
+            AddressableAssetsBuildContext aaContext
+        )
         {
             var originCatalogPath = Path.Combine(originDirectoryPath, "catalog.json");
             if (false == File.Exists(originCatalogPath))
@@ -142,14 +147,11 @@ namespace JJ4Unity.Editor.AssetBundle
 
             var targetCatalogPath = $"{originCatalogPath}.tmp";
 
-            using (var reader = new StreamReader(originCatalogPath))
-            {
-                var catalogJson = reader.ReadToEnd();
-                var updatedJson = catalogJson.Replace(
-                    typeof(AssetBundleProvider).FullName!,
-                    typeof(EncryptedAssetBundleProvider).FullName);
+            var cd = CreateContentCatalogData(aaContext);
+            var updatedJson = JsonUtility.ToJson(cd);
 
-                using var writer = new StreamWriter(targetCatalogPath, false);
+            using (var writer = new StreamWriter(targetCatalogPath, false))
+            {
                 writer.Write(updatedJson);
             }
 
@@ -158,8 +160,8 @@ namespace JJ4Unity.Editor.AssetBundle
 
             Debug.Log($"Content Catalog updated with EncryptedAssetBundleProvider: {originCatalogPath}");
         }
-
-        private static void ModifyContentCatalogFromBinary(
+#else
+        private void ModifyContentCatalogFromBinary(
             string originDirectoryPath,
             AddressableAssetsBuildContext aaContext
         )
@@ -172,56 +174,20 @@ namespace JJ4Unity.Editor.AssetBundle
 
             var targetCatalogPath = $"{originCatalogPath}.tmp";
 
-            using (var readFileStream = new FileStream(originCatalogPath, FileMode.Open, FileAccess.Read))
+            var cd = CreateContentCatalogData(aaContext);
+
+            var bytes = cd.SerializeToByteArray();
+            var contentHash = HashingMethods.Calculate(bytes);
+
+            if (aaContext.Settings.BuildRemoteCatalog
+                || ProjectConfigData.GenerateBuildLayout)
             {
-                var formatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                var catalog = (ContentCatalogData)formatter.Deserialize(readFileStream);
-                // ModifyContentCatalogImpl(catalog);
-                for (int i = catalog.ResourceProviderData.Count - 1; i >= 0; i--)
-                {
-                    if (catalog.ResourceProviderData[i].Id == typeof(AssetBundleProvider).FullName)
-                    {
-                        var resource = ObjectInitializationData.CreateSerializedInitializationData(typeof(EncryptedAssetBundleProvider));
-                        catalog.ResourceProviderData.RemoveAt(i);
-                        catalog.ResourceProviderData.Add(resource);
-                    }
-                }
-                
-                for (int i = aaContext.locations.Count - 1; i >= 0; i--)
-                {
-                    var location = aaContext.locations[i];
-                    if (location.Provider != typeof(AssetBundleProvider).FullName)
-                    {
-                        continue;
-                    }
+                cd.LocalHash = contentHash.ToString();
+            }
 
-                    var newLocation = new ContentCatalogDataEntry(
-                        location.ResourceType,
-                        location.InternalId,
-                        typeof(EncryptedAssetBundleProvider).FullName,
-                        location.Keys,
-                        location.Dependencies,
-                        location.Data
-                    );
-
-                    aaContext.locations[i] = newLocation;
-                }
-                
-                // TODO(JJO): ContentCatalog에 SetData
-                catalog.SetData(aaContext.locations.OrderBy(f => f.InternalId).ToList());
-                // for (int i = catalog.ProviderIds.Length - 1; i >= 0; i--)
-                // {
-                //     if (catalog.ProviderIds[i] == typeof(AssetBundleProvider).FullName)
-                //     {
-                //         catalog.ProviderIds[i] = typeof(EncryptedAssetBundleProvider).FullName;
-                //     }
-                // }
-
-                var bytes = catalog.SerializeToByteArray();
-                using var writeFileStream = new FileStream(targetCatalogPath, FileMode.Create, FileAccess.Write);
+            using (var writeFileStream = new FileStream(targetCatalogPath, FileMode.Create, FileAccess.Write))
+            {
                 writeFileStream.Write(bytes, 0, bytes.Length);
-                // var writeFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                // writeFormatter.Serialize(writeFileStream, catalog);
             }
 
             File.Delete(originCatalogPath);
@@ -229,110 +195,84 @@ namespace JJ4Unity.Editor.AssetBundle
 
             Debug.Log($"Content Catalog updated with EncryptedAssetBundleProvider: {originCatalogPath}");
         }
-
-        // private static bool ModifyContentCatalogFromBundle(string originDirectoryPath)
-        // {
-        //     var originCatalogPath = Path.Combine(originDirectoryPath, "catalog.bundle");
-        //     if (false == File.Exists(originCatalogPath))
-        //     {
-        //         Debug.LogWarning($"Failed to modify catalog - file not exist: {originCatalogPath}");
-        //         return false;
-        //     }
-        //
-        //     var targetCatalogPath = $"{originCatalogPath}.tmp";
-        //
-        //     var bundle = UnityEngine.AssetBundle.LoadFromFile(originCatalogPath);
-        //     if (null == bundle)
-        //     {
-        //         Debug.LogError($"Failed to load bundle: {originCatalogPath}");
-        //         return false;
-        //     }
-        //
-        //     var names = bundle.GetAllAssetNames();
-        //     if (names.Length == 0)
-        //     {
-        //         Debug.LogError($"Failed to load bundle - no assets: {originCatalogPath}");
-        //         bundle.Unload(false);
-        //         return false;
-        //     }
-        //     
-        //     var catalogData = bundle.LoadAsset<TextAsset>(names[0]);
-        //     bundle.Unload(false);
-        //     if (null == catalogData)
-        //     {
-        //         Debug.LogError($"Failed to load catalog data: {originCatalogPath}");
-        //         return false;
-        //     }
-        //     
-        //     var catalog = JsonUtility.FromJson<ContentCatalogData>(catalogData.text);
-        //     var modifiedJson = ModifyContentCatalogImpl(catalog);
-        //     var tempPath = "Assets/catalog.json";
-        //     
-        //     File.WriteAllText(tempPath, modifiedJson);
-        //     AssetDatabase.ImportAsset(tempPath);
-        //     AssetDatabase.Refresh();
-        //
-        //     var buildMap = new AssetBundleBuild[]
-        //     {
-        //         new()
-        //         {
-        //             assetBundleName = "catalog.bundle",
-        //             assetNames = new[] { tempPath }
-        //         }
-        //     };
-        //
-        //     if (Directory.Exists("BuildBundles"))
-        //     {
-        //         Directory.Delete("BuildBundles", true);
-        //     }
-        //     
-        //     Directory.CreateDirectory("BuildBundles");
-        //     
-        //     var manifest = BuildPipeline.BuildAssetBundles("BuildBundles", buildMap, BuildAssetBundleOptions.None, EditorUserBuildSettings.activeBuildTarget);
-        //     if (null != manifest)
-        //     {
-        //         AssetDatabase.DeleteAsset(tempPath);
-        //         AssetDatabase.Refresh();
-        //     }
-        //     
-        //     File.Delete(originCatalogPath);
-        //     File.Move("BuildBundles/catalog.bundle", originCatalogPath);
-        //     // File.Copy("BuildBundles/catalog.bundle", originCatalogPath, true);
-        //     
-        //     Directory.Delete("BuildBundles", true);
-        //
-        //     Debug.Log($"Content Catalog updated with EncryptedAssetBundleProvider: {originCatalogPath}");
-        //
-        //     return true;
-        // }
-
-        private static string ModifyContentCatalogImpl(ContentCatalogData catalog)
-        {
-            for (int i = catalog.ResourceProviderData.Count - 1; i >= 0; i--)
-            {
-                if (catalog.ResourceProviderData[i].Id == typeof(AssetBundleProvider).FullName)
-                {
-                    var resource =
-                        ObjectInitializationData.CreateSerializedInitializationData(
-                            typeof(EncryptedAssetBundleProvider));
-                    catalog.ResourceProviderData.RemoveAt(i);
-                    catalog.ResourceProviderData.Insert(i, resource);
-                }
-            }
-
-#if ENABLE_JSON_CATALOG
-            for (int i = catalog.ProviderIds.Length - 1; i >= 0; i--)
-            {
-                if (catalog.ProviderIds[i] == typeof(AssetBundleProvider).FullName)
-                {
-                    catalog.ProviderIds[i] = typeof(EncryptedAssetBundleProvider).FullName;
-                }
-            }
-#else
 #endif
 
-            var modifiedJson = JsonUtility.ToJson(catalog);
-            return modifiedJson;
+        /// <summary>
+        /// NOTE(JJO): aaContext를 이용하여 생성된 ContentCatalogData 재구성
+        /// </summary>
+        /// <param name="aaContext"></param>
+        /// <returns></returns>
+        private ContentCatalogData CreateContentCatalogData(AddressableAssetsBuildContext aaContext)
+        {
+            for (int i = aaContext.locations.Count - 1; i >= 0; i--)
+            {
+                var location = aaContext.locations[i];
+                if (location.Provider != typeof(AssetBundleProvider).FullName)
+                {
+                    continue;
+                }
+
+                // NOTE(JJO): EncryptedAssetBundleProvider와 DecryptedBundleResource로 재설정
+                var newLocation = new ContentCatalogDataEntry(
+                    typeof(DecryptedBundleResource),
+                    location.InternalId,
+                    typeof(EncryptedAssetBundleProvider).FullName,
+                    location.Keys,
+                    location.Dependencies,
+                    location.Data
+                );
+
+                aaContext.locations[i] = newLocation;
+            }
+
+            // NOTE(JJO): 재설정한 locations를 새로 생성하는 카탈로그에 설정
+            var contentCatalogData = new ContentCatalogData(
+                aaContext.locations,
+                ResourceManagerRuntimeData.kCatalogAddress
+            );
+
+            var schema = aaContext
+                .Settings
+                .DefaultGroup
+                .GetSchema<BundledAssetGroupSchema>();
+
+            // NOTE(JJO): AddressableAssetSettings에 설정한 AssetBundleProvider를 EncryptedAssetBundleProvider로 변경
+            var assetBundleProviderType =
+                typeof(AssetBundleProvider) == schema.AssetBundleProviderType.Value
+                    ? typeof(EncryptedAssetBundleProvider)
+                    : schema.AssetBundleProviderType.Value;
+
+            contentCatalogData.ResourceProviderData.Add(
+                ObjectInitializationData.CreateSerializedInitializationData(
+                    assetBundleProviderType
+                )
+            );
+
+            // NOTE(JJO): 빌드에서 이미 쓰여진 ProviderType들을 검사하여 EncryptedAssetBundleProvider로 변경
+            foreach (var type in aaContext.providerTypes)
+            {
+                var providerType =
+                    typeof(AssetBundleProvider) == type
+                        ? typeof(EncryptedAssetBundleProvider)
+                        : type;
+
+                contentCatalogData.ResourceProviderData.Add(
+                    ObjectInitializationData.CreateSerializedInitializationData(
+                        providerType
+                    )
+                );
+            }
+
+            contentCatalogData.InstanceProviderData =
+                ObjectInitializationData.CreateSerializedInitializationData(
+                    instanceProviderType.Value
+                );
+            contentCatalogData.SceneProviderData =
+                ObjectInitializationData.CreateSerializedInitializationData(
+                    sceneProviderType.Value
+                );
+
+            return contentCatalogData;
         }
     }
 }

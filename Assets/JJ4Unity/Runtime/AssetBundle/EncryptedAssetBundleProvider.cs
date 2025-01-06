@@ -57,7 +57,7 @@ namespace JJ4Unity.Runtime.AssetBundle
                 if (request.result != UnityWebRequest.Result.Success)
                 {
                     Debug.LogError($"Failed to load encrypted AssetBundle: {request.error}");
-                    provideHandle.Complete<CustomAssetBundleResource>(null, false,
+                    provideHandle.Complete<DecryptedBundleResource>(null, false,
                         new Exception($"Failed to load encrypted asset bundle: {internalId}"));
                     return;
                 }
@@ -81,16 +81,16 @@ namespace JJ4Unity.Runtime.AssetBundle
                 using var decryptedStream = DecryptDataToMemoryStream(stream);
 
                 var bundle = UnityEngine.AssetBundle.LoadFromStream(decryptedStream);
-                var assetBundleResource = new CustomAssetBundleResource(bundle);
+                var assetBundleResource = new DecryptedBundleResource(bundle);
                 provideHandle.Complete(assetBundleResource, true, null);
             }
             catch (CryptographicException e)
             {
-                provideHandle.Complete<CustomAssetBundleResource>(null, false, e);
+                provideHandle.Complete<DecryptedBundleResource>(null, false, e);
             }
             catch (Exception e)
             {
-                provideHandle.Complete<CustomAssetBundleResource>(null, false, e);
+                provideHandle.Complete<DecryptedBundleResource>(null, false, e);
             }
         }
 

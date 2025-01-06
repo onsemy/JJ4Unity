@@ -36,7 +36,7 @@ public class Test : MonoBehaviour
         );
 
         yield return InitializeAddressables();
-        
+
         Debug.Log($"_childGameObject is null? {_childGameObject == null}");
         Debug.Log($"_childTransform is null? {_childTransform == null}");
         Debug.Log($"_light is null? {_light == null}");
