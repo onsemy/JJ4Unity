@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using JJ4Unity.Runtime.AssetBundle;
 using UnityEditor;
@@ -28,9 +29,6 @@ namespace JJ4Unity.Editor.AssetBundle
             {
                 return default;
             }
-            
-            // TODO(JJO): base.DoBuild하기 전에 aaContent를 수정해야 함.
-            //
             
             var result = base.DoBuild<TResult>(builderInput, aaContext);
 
@@ -120,9 +118,23 @@ namespace JJ4Unity.Editor.AssetBundle
                 return;
             }
 
-            ModifyContentCatalogFromJson(originDirectoryPath);
+            // NOTE(JJO): catalog.json
+            if (ModifyContentCatalogFromJson(originDirectoryPath))
+            {
+                return;
+            }
 
-            ModifyContentCatalogFromBinary(originDirectoryPath);
+            // NOTE(JJO): catalog.bin
+            if (ModifyContentCatalogFromBinary(originDirectoryPath))
+            {
+                return;
+            }
+
+            // NOTE(JJO): catalog.bundle
+            if (ModifyContentCatalogFromBundle(originDirectoryPath))
+            {
+                return;
+            }
         }
 
         private static bool ModifyContentCatalogFromJson(string originDirectoryPath)
@@ -159,11 +171,6 @@ namespace JJ4Unity.Editor.AssetBundle
             var originCatalogPath = Path.Combine(originDirectoryPath, "catalog.bin");
             if (false == File.Exists(originCatalogPath))
             {
-                originCatalogPath = Path.Combine(originDirectoryPath, "catalog.bundle");
-            }
-
-            if (false == File.Exists(originCatalogPath))
-            {
                 return false;
             }
 
@@ -173,23 +180,24 @@ namespace JJ4Unity.Editor.AssetBundle
             {
                 var formatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
                 var catalog = (ContentCatalogData)formatter.Deserialize(readFileStream);
-                for (int i = catalog.ResourceProviderData.Count; i >= 0; i--)
-                {
-                    if (catalog.ResourceProviderData[i].Id == typeof(AssetBundleProvider).FullName)
-                    {
-                        var resource = ObjectInitializationData.CreateSerializedInitializationData(typeof(EncryptedAssetBundleProvider));
-                        catalog.ResourceProviderData.RemoveAt(i);
-                        catalog.ResourceProviderData.Add(resource);
-                    }
-                }
-
-                for (int i = catalog.ProviderIds.Length; i >= 0; i--)
-                {
-                    if (catalog.ProviderIds[i] == typeof(AssetBundleProvider).FullName)
-                    {
-                        catalog.ProviderIds[i] = typeof(EncryptedAssetBundleProvider).FullName;
-                    }
-                }
+                ModifyContentCatalogImpl(catalog);
+                // for (int i = catalog.ResourceProviderData.Count - 1; i >= 0; i--)
+                // {
+                //     if (catalog.ResourceProviderData[i].Id == typeof(AssetBundleProvider).FullName)
+                //     {
+                //         var resource = ObjectInitializationData.CreateSerializedInitializationData(typeof(EncryptedAssetBundleProvider));
+                //         catalog.ResourceProviderData.RemoveAt(i);
+                //         catalog.ResourceProviderData.Add(resource);
+                //     }
+                // }
+                //
+                // for (int i = catalog.ProviderIds.Length - 1; i >= 0; i--)
+                // {
+                //     if (catalog.ProviderIds[i] == typeof(AssetBundleProvider).FullName)
+                //     {
+                //         catalog.ProviderIds[i] = typeof(EncryptedAssetBundleProvider).FullName;
+                //     }
+                // }
 
                 using var writeFileStream = new FileStream(targetCatalogPath, FileMode.Create, FileAccess.Write);
                 var writeFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
@@ -202,6 +210,106 @@ namespace JJ4Unity.Editor.AssetBundle
             Debug.Log($"Content Catalog updated with EncryptedAssetBundleProvider: {originCatalogPath}");
 
             return true;
+        }
+
+        private static bool ModifyContentCatalogFromBundle(string originDirectoryPath)
+        {
+            var originCatalogPath = Path.Combine(originDirectoryPath, "catalog.bundle");
+            if (false == File.Exists(originCatalogPath))
+            {
+                Debug.LogWarning($"Failed to modify catalog - file not exist: {originCatalogPath}");
+                return false;
+            }
+
+            var targetCatalogPath = $"{originCatalogPath}.tmp";
+
+            var bundle = UnityEngine.AssetBundle.LoadFromFile(originCatalogPath);
+            if (null == bundle)
+            {
+                Debug.LogError($"Failed to load bundle: {originCatalogPath}");
+                return false;
+            }
+
+            var names = bundle.GetAllAssetNames();
+            if (names.Length == 0)
+            {
+                Debug.LogError($"Failed to load bundle - no assets: {originCatalogPath}");
+                bundle.Unload(false);
+                return false;
+            }
+            
+            var catalogData = bundle.LoadAsset<TextAsset>(names[0]);
+            bundle.Unload(false);
+            if (null == catalogData)
+            {
+                Debug.LogError($"Failed to load catalog data: {originCatalogPath}");
+                return false;
+            }
+            
+            var catalog = JsonUtility.FromJson<ContentCatalogData>(catalogData.text);
+            var modifiedJson = ModifyContentCatalogImpl(catalog);
+            var tempPath = "Assets/catalog.json";
+            
+            File.WriteAllText(tempPath, modifiedJson);
+            AssetDatabase.ImportAsset(tempPath);
+            AssetDatabase.Refresh();
+
+            var buildMap = new AssetBundleBuild[]
+            {
+                new()
+                {
+                    assetBundleName = "catalog.bundle",
+                    assetNames = new[] { tempPath }
+                }
+            };
+
+            if (Directory.Exists("BuildBundles"))
+            {
+                Directory.Delete("BuildBundles", true);
+            }
+            
+            Directory.CreateDirectory("BuildBundles");
+            
+            var manifest = BuildPipeline.BuildAssetBundles("BuildBundles", buildMap, BuildAssetBundleOptions.None, EditorUserBuildSettings.activeBuildTarget);
+            if (null != manifest)
+            {
+                AssetDatabase.DeleteAsset(tempPath);
+                AssetDatabase.Refresh();
+            }
+            
+            File.Delete(originCatalogPath);
+            File.Move("BuildBundles/catalog.bundle", originCatalogPath);
+            // File.Copy("BuildBundles/catalog.bundle", originCatalogPath, true);
+            
+            Directory.Delete("BuildBundles", true);
+
+            Debug.Log($"Content Catalog updated with EncryptedAssetBundleProvider: {originCatalogPath}");
+
+            return true;
+        }
+
+        private static string ModifyContentCatalogImpl(ContentCatalogData catalog)
+        {
+            for (int i = catalog.ResourceProviderData.Count - 1; i >= 0; i--)
+            {
+                if (catalog.ResourceProviderData[i].Id == typeof(AssetBundleProvider).FullName)
+                {
+                    var resource = ObjectInitializationData.CreateSerializedInitializationData(typeof(EncryptedAssetBundleProvider));
+                    catalog.ResourceProviderData.RemoveAt(i);
+                    catalog.ResourceProviderData.Insert(i, resource);
+                }
+            }
+
+            for (int i = catalog.ProviderIds.Length - 1; i >= 0; i--)
+            {
+                if (catalog.ProviderIds[i] == typeof(AssetBundleProvider).FullName)
+                {
+                    catalog.ProviderIds[i] = typeof(EncryptedAssetBundleProvider).FullName;
+                }
+            }
+            
+            var modifiedJson = JsonUtility.ToJson(catalog);
+            return modifiedJson;
         }
     }
 }

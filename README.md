@@ -18,11 +18,32 @@ Unity를 쓰면서 유용한 기능을 모은 저장소
 
 기본적인 Addressables는 암호화 및 복호화하지 않고 불러와서 애써 만든 소중한 에셋이 탈취 당할 가능성이 높습니다. 해커를 조금 귀찮게 해줄 암/복호화 기능을 추가했습니다. 프로젝트에서 사용하기 위해 다음과 같은 코드를 Addressables를 사용하기 전에 호출해주세요.
 
-> `JJ4Unity.Runtime.AssetBundle.AddressablesHelper.SetEncryptedProvider(new EncryptedAssetBundleProvider(AES_Key, AES_IV));`
+> ```csharp
+> Addressables.ResourceManager.ResourceProviders.Add(
+>     new EncryptedAssetBundleProvider(
+>         key: "1234567890abcdef",
+>         iv: "1234567890abcdef"
+>     )
+> );
+>
+> Addressables.InitializeAsync(false);
+> // ...
+> ```
 
-암/복호화 알고리즘은 AES로 되어 있으나, 원한다면 `EncryptedAssetBundleProvider`를 상속받아서 적용할 수 있습니다. 본인만의 클래스를 구현한 후, `SetEncryptedProvider()` 함수를 본인의 클래스를 넣어주세요.
+위와 같은 암/복호화를 사용하는 경우, `JJ4UnitySettings`를 생성/설정해야 합니다.
 
-위와 같은 암/복호화를 사용하는 경우, Addressables 메뉴에서 제공하는 빌드가 아닌 직접 빌드 스크립트를 작성해야 합니다. JJ4Unity에서는 `JJ4Unity/Build AssetBundle` 메뉴를 통해 Addressables Groups에 설정된 번들을 빌드 및 암호화할 수 있습니다. AES Key 및 IV 설정은 `JJ4Unity/Open Encrypt AssetBundle Settings`에서 가능합니다.
+![](docs/Addressables.png)
+![](docs/Addressables-0.png)
+
+*Random Key/IV* 버튼을 누르면 Key와 IV에 임의의 16바이트 값이 생성됩니다. 이는 위에 적힌 예제 코드에서 key, iv에 각각 넣으면 됩니다.
+
+암호화된 Asset Bundle을 Build하려는 경우, `Assets/AddressableAssetsData/DataBuilders`에 사전에 정의된 `EncryptedBuildScript`를 생성해야 합니다.
+
+![](docs/Addressables-1.png)
+
+또한, *Addressables Asset Settings*의 *Build and Play Mode Scripts*에서 Default Build Script 부분을 방금 생성한 `EncryptedBuildScript`로 설정해야 합니다.
+
+![](docs/Addressables-2.png)
 
 ### Debug
 
@@ -95,3 +116,28 @@ public class SomeClass3 : MonoBehaviour
 ### Visual Studio Code 연동 기능이 하나의 Unity Editor에서만 사용 가능
 
 Unity Editor와 Visual Studio Code가 1:1로 하나만 연동됩니다. 추후 다중 연결을 지원할 예정입니다.
+
+### 암/복호화 기능 사용 시, `Addressables.InitializeAsync()` 예외 문제
+
+암/복호화 기능 사용 시, `Addressables.InitializeAsync()`를 호출할 경우 다음과 같은 예외가 발생할 수 있습니다.
+
+> `Exception: Attempting to use an invalid operation handle`
+
+그럴 경우, `Addressables.InitializeAsync(false);`를 호출할 것을 권고드립니다.
+
+```csharp
+private IEnumerator InitializeAddressables()
+{
+    var handle = Addressables.InitializeAsync(false);
+    yield return handle;
+
+    if (handle.Status != AsyncOperationStatus.Succeeded)
+    {
+        Debug.LogError($"InitializeAddressables failed: {handle.Status}");
+        yield break;
+    }
+    
+    Debug.Log($"Initialize Addressables");
+    Addressables.Release(handle);
+}
+```
