@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.0] - 2025-01-07
+
+- 유니티6 (6000.0) 이상부터 사용 가능하도록 작업
+- Addressables에 암/복호화 사용 가능하도록 작업
+- JJ4UnitySettings 추가
+
 ## [0.0.5] - 2024-11-20
 
 - UnityEngine.Debug를 쓰던 내부 코드를 JJ4Unity.Extension.Debug를 쓰도록 변경
