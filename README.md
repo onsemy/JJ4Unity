@@ -10,13 +10,13 @@ Unity를 쓰면서 유용한 기능을 모은 저장소
 2. 다음 주소를 복사/붙여넣기 합니다.
     > `https://github.com/onsemy/JJ4Unity.git?path=Assets/JJ4Unity`
 
-또는, Github Release에서 다운로드 받아서 적절한 위치에 복사/붙여넣기 합니다.
+또는, [Github Release](https://github.com/onsemy/JJ4Unity/releases)에서 다운로드 받아서 적절한 위치에 복사/붙여넣기 합니다.
 
 ## 구동 환경
 
 JJ4Unity는 다음 환경에서 정상 동작하도록 개발하고 있습니다.
 
-- Unity 6.x 이상 ([6000.0.23f1](unityhub://6000.0.23f1/1c4764c07fb4) 이상)
+- Unity 6.x 이상 (6000.0.23f1 이상)
     - https://unity.com/releases/editor/archive
 
 ### 종속성 패키지

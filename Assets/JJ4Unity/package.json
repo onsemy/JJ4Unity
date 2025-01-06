@@ -6,7 +6,7 @@
         "email": "onsemy@gmail.com",
         "url": "https://github.com/JJ4Unity/"
     },
-    "version": "0.1.0",
+    "version": "0.1.1",
     "unity": "6000.0",
     "description": "유용했던 코드 모음",
     "keywords": [ "plugin", "tools", "jj4unity", "addressables" ],
@@ -15,6 +15,6 @@
     "dependencies": {
         "com.unity.addressables": "2.2.2"
     },
-    "documentationUrl": "https://github.com/onsemy/JJ4Unity/blob/0.1.0/README.md",
-    "changelogUrl": "https://github.com/onsemy/JJ4Unity/blob/0.1.0/CHANGELOG.md"
+    "documentationUrl": "https://github.com/onsemy/JJ4Unity/blob/0.1.1/README.md",
+    "changelogUrl": "https://github.com/onsemy/JJ4Unity/blob/0.1.1/CHANGELOG.md"
 }
