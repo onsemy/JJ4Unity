@@ -13,7 +13,7 @@
     "license": "MIT",
     "category": "Library",
     "dependencies": {
-        "com.unity.addressables": ">=2.2.2 <3.0.0"
+        "com.unity.addressables": "2.2.2"
     },
     "documentationUrl": "https://github.com/onsemy/JJ4Unity/blob/0.1.0/README.md",
     "changelogUrl": "https://github.com/onsemy/JJ4Unity/blob/0.1.0/CHANGELOG.md"
