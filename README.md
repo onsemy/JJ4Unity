@@ -4,9 +4,26 @@ Unity를 쓰면서 유용한 기능을 모은 저장소
 
 ## 설치 방법
 
-1. Package Manager에서 `+`를 눌러서 `Add package from git URL...`을 선택합니다.
+![](docs/2025-01-07-00-47-52.png)
+
+1. *Package Manager*에서 `+`를 눌러서 `Add package from git URL...`을 선택합니다.
 2. 다음 주소를 복사/붙여넣기 합니다.
     > `https://github.com/onsemy/JJ4Unity.git?path=Assets/JJ4Unity`
+
+또는, Github Release에서 다운로드 받아서 적절한 위치에 복사/붙여넣기 합니다.
+
+## 구동 환경
+
+JJ4Unity는 다음 환경에서 정상 동작하도록 개발하고 있습니다.
+
+- Unity 6.x 이상 ([6000.0.23f1](unityhub://6000.0.23f1/1c4764c07fb4) 이상)
+    - https://unity.com/releases/editor/archive
+
+### 종속성 패키지
+
+아래의 패키지와 함께 사용하도록 개발되어 있습니다.
+
+- [Addressables 2.2.2](https://docs.unity3d.com/Packages/com.unity.addressables@2.2/manual/index.html) 이상
 
 ## 예제 코드
 
@@ -128,6 +145,7 @@ Unity Editor와 Visual Studio Code가 1:1로 하나만 연동됩니다. 추후 �
 ```csharp
 private IEnumerator InitializeAddressables()
 {
+    // var handle = Addressables.InitializeAsync(); // maybe occurred exception.
     var handle = Addressables.InitializeAsync(false);
     yield return handle;
 

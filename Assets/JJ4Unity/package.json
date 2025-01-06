@@ -4,17 +4,17 @@
     "author": {
         "name": "Jeongjin Oh",
         "email": "onsemy@gmail.com",
-        "url": "https://onsemy.me/"
+        "url": "https://github.com/JJ4Unity/"
     },
-    "version": "0.0.6",
-    "unity": "2022.3",
+    "version": "0.1.0",
+    "unity": "6000.0",
     "description": "유용했던 코드 모음",
-    "keywords": [ "plugin", "tools" ],
+    "keywords": [ "plugin", "tools", "jj4unity", "addressables" ],
     "license": "MIT",
     "category": "Library",
     "dependencies": {
-        "com.unity.addressables": "*"
+        "com.unity.addressables": ">=2.2.2 <3.0.0"
     },
-    "documentationUrl": "https://github.com/onsemy/JJ4Unity/blob/0.0.6/README.md",
-    "changelogUrl": "https://github.com/onsemy/JJ4Unity/blob/0.0.6/CHANGELOG.md"
+    "documentationUrl": "https://github.com/onsemy/JJ4Unity/blob/0.1.0/README.md",
+    "changelogUrl": "https://github.com/onsemy/JJ4Unity/blob/0.1.0/CHANGELOG.md"
 }
