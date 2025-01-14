@@ -5,17 +5,24 @@ using System.Text;
 using JJ4Unity.Runtime.Extension;
 using JJ4Unity.Runtime.Utility;
 using UnityEngine.Networking;
+using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 
 namespace JJ4Unity.Runtime.AssetBundle
 {
     public class EncryptedAssetBundleProvider : AssetBundleProvider
     {
+        #region Fields
+        
         private readonly string _key; // 16바이트
         private readonly string _iv; // 16바이트
         private readonly bool _useStream;
         private DownloadHandler _downloadHandler;
+        
+        #endregion
 
+        #region Constructor
+        
         public EncryptedAssetBundleProvider(string key, string iv, bool useStream = false)
         {
             _key = key;
@@ -23,6 +30,10 @@ namespace JJ4Unity.Runtime.AssetBundle
             _useStream = useStream;
             Debug.Log($"Key: {_key}, IV: {_iv}, UseStream: {_useStream}");
         }
+        
+        #endregion
+        
+        #region Overrides
 
         public override void Provide(ProvideHandle provideHandle)
         {
@@ -38,6 +49,20 @@ namespace JJ4Unity.Runtime.AssetBundle
                 ProvideFromFile(provideHandle, internalId);
             }
         }
+
+        public override void Release(IResourceLocation location, object asset)
+        {
+            if (asset is DecryptedBundleResource resource)
+            {
+                resource.Unload();
+            }
+            
+            base.Release(location, asset);
+        }
+        
+        #endregion
+        
+        #region Provide Decrypted Bundle
 
         private void ProvideFromFile(ProvideHandle provideHandle, string internalId)
         {
@@ -89,10 +114,9 @@ namespace JJ4Unity.Runtime.AssetBundle
         
         private void DecryptBundle(ProvideHandle provideHandle, Stream stream)
         {
-            MemoryStream decryptedStream = null;
             try
             {
-                decryptedStream = DecryptToMemoryStream(stream);
+                using var decryptedStream = DecryptToStream(stream);
                 var bundle = UnityEngine.AssetBundle.LoadFromStream(decryptedStream);
                 var assetBundleResource = new DecryptedBundleResource(bundle);
                 provideHandle.Complete(assetBundleResource, true, null);
@@ -104,10 +128,6 @@ namespace JJ4Unity.Runtime.AssetBundle
             catch (Exception e)
             {
                 provideHandle.Complete<DecryptedBundleResource>(null, false, e);
-            }
-            finally
-            {
-                // decryptedStream?.Dispose();
             }
         }
 
@@ -130,7 +150,7 @@ namespace JJ4Unity.Runtime.AssetBundle
             }
         }
 
-        private MemoryStream DecryptToMemoryStream(Stream encryptedStream)
+        private Stream DecryptToStream(Stream encryptedStream)
         {
             using var aes = Aes.Create();
             aes.Key = Encoding.UTF8.GetBytes(_key);
@@ -138,12 +158,8 @@ namespace JJ4Unity.Runtime.AssetBundle
             aes.Padding = PaddingMode.PKCS7;
             aes.Mode = CipherMode.CBC;
 
-            var decryptedStream = new MemoryStream();
-            using var cryptoStream = new CryptoStream(encryptedStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
-            cryptoStream.CopyTo(decryptedStream);
-            decryptedStream.Seek(0, SeekOrigin.Begin);
-
-            return decryptedStream;
+            var cryptoStream = new CryptoStream(encryptedStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
+            return cryptoStream;
         }
 
         private byte[] DecryptToByteArray(byte[] encryptedData)
@@ -161,5 +177,7 @@ namespace JJ4Unity.Runtime.AssetBundle
             
             return decryptedStream.ToArray();
         }
+        
+        #endregion
     }
 }
