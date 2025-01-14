@@ -5,12 +5,10 @@ namespace JJ4Unity.Runtime.AssetBundle
     public class DecryptedBundleResource : IAssetBundleResource
     {
         private UnityEngine.AssetBundle _assetBundle;
-        private System.IO.MemoryStream _decryptedStream;
 
-        public DecryptedBundleResource(UnityEngine.AssetBundle assetBundle, System.IO.MemoryStream decryptedStream = null)
+        public DecryptedBundleResource(UnityEngine.AssetBundle assetBundle)
         {
             _assetBundle = assetBundle;
-            _decryptedStream = decryptedStream;
         }
         
         public UnityEngine.AssetBundle GetAssetBundle()
@@ -27,9 +25,6 @@ namespace JJ4Unity.Runtime.AssetBundle
             
             _assetBundle.Unload(true);
             _assetBundle = null;
-            
-            _decryptedStream?.Dispose();
-            _decryptedStream = null;
         }
     }
 }
