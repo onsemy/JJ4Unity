@@ -83,9 +83,11 @@ namespace JJ4Unity.Runtime.AssetBundle
 
         private void DecryptBundle(ProvideHandle provideHandle, Stream stream)
         {
+            MemoryStream decryptedStream = null;
+            
             try
             {
-                using var decryptedStream = DecryptDataToMemoryStream(stream);
+                decryptedStream = DecryptDataToMemoryStream(stream);
 
                 var bundle = UnityEngine.AssetBundle.LoadFromStream(decryptedStream);
                 var assetBundleResource = new DecryptedBundleResource(bundle);
@@ -98,6 +100,10 @@ namespace JJ4Unity.Runtime.AssetBundle
             catch (Exception e)
             {
                 provideHandle.Complete<DecryptedBundleResource>(null, false, e);
+            }
+            finally
+            {
+                decryptedStream?.Dispose();
             }
         }
 
@@ -114,6 +120,7 @@ namespace JJ4Unity.Runtime.AssetBundle
 
             var decryptedStream = new MemoryStream();
             cryptoStream.CopyTo(decryptedStream);
+            cryptoStream.FlushFinalBlock();
             decryptedStream.Seek(0, SeekOrigin.Begin);
 
             return decryptedStream;
