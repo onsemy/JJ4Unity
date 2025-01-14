@@ -13,8 +13,6 @@ namespace JJ4Unity.Runtime.AssetBundle
     {
         private readonly string _key; // 16바이트
         private readonly string _iv; // 16바이트
-        
-        private StreamDownloadHandler _downloadHandler;
 
         public EncryptedAssetBundleProvider(string key, string iv)
         {
@@ -25,7 +23,6 @@ namespace JJ4Unity.Runtime.AssetBundle
 
         public override void Provide(ProvideHandle provideHandle)
         {
-            // Debug.Log($"Try to provide AssetBundle - provideHandle.Location is null? {provideHandle}, key: {_key}, iv: {_iv}");
             var internalId = provideHandle.Location.InternalId;
             Debug.Log($"Loading encrypted asset bundle: {internalId}");
 
@@ -35,26 +32,19 @@ namespace JJ4Unity.Runtime.AssetBundle
             }
             else
             {
-                ProvideFromFileStream(provideHandle, internalId);
+                ProvideFromFile(provideHandle, internalId);
             }
         }
 
-        private void ProvideFromFileStream(ProvideHandle provideHandle, string internalId)
+        private void ProvideFromFile(ProvideHandle provideHandle, string internalId)
         {
-            using var fileStream = new FileStream(internalId, FileMode.Open, FileAccess.Read);
-            DecryptBundle(provideHandle, fileStream);
+            var data = File.ReadAllBytes(internalId);
+            DecryptBundle(provideHandle, data);
         }
 
         private void ProvideFromJarFile(ProvideHandle provideHandle, string internalId)
         {
-            _downloadHandler = new StreamDownloadHandler();
-            
-            var request = new UnityWebRequest(
-                internalId,
-                UnityWebRequest.kHttpVerbGET,
-                _downloadHandler,
-                null
-            );
+            var request = UnityWebRequest.Get(internalId);
             
             request.SendWebRequest().completed += _ =>
             {
@@ -68,33 +58,22 @@ namespace JJ4Unity.Runtime.AssetBundle
 
                 try
                 {
-                    var stream = _downloadHandler.GetStream();
-                    DecryptBundle(provideHandle, stream);
+                    var data = request.downloadHandler.data;
+                    DecryptBundle(provideHandle, data);
                 }
                 finally
                 {
                     request.Dispose();
-                    
-                    _downloadHandler?.Dispose();
-                    _downloadHandler = null;
                 }
             };
         }
 
-        private void DecryptBundle(ProvideHandle provideHandle, Stream stream)
+        private void DecryptBundle(ProvideHandle provideHandle, byte[] data)
         {
-            MemoryStream decryptedStream = null;
-            
             try
             {
-                decryptedStream = DecryptDataToMemoryStream(stream);
-
-                if (false == decryptedStream.CanRead || false == decryptedStream.CanSeek)
-                {
-                    throw new Exception($"Decrypted stream can not readable or seekable - CanRead={decryptedStream.CanRead}, CanSeek={decryptedStream.CanSeek}");
-                }
-
-                var bundle = UnityEngine.AssetBundle.LoadFromStream(decryptedStream);
+                var decryptedData = DecryptDataToByteArray(data);
+                var bundle = UnityEngine.AssetBundle.LoadFromMemory(decryptedData);
                 var assetBundleResource = new DecryptedBundleResource(bundle);
                 provideHandle.Complete(assetBundleResource, true, null);
             }
@@ -105,10 +84,6 @@ namespace JJ4Unity.Runtime.AssetBundle
             catch (Exception e)
             {
                 provideHandle.Complete<DecryptedBundleResource>(null, false, e);
-            }
-            finally
-            {
-                decryptedStream?.Dispose();
             }
         }
 
@@ -130,7 +105,7 @@ namespace JJ4Unity.Runtime.AssetBundle
             return decryptedStream;
         }
 
-        private MemoryStream DecryptDataToMemoryStream(byte[] encryptedData)
+        private byte[] DecryptDataToByteArray(byte[] encryptedData)
         {
             using var aes = Aes.Create();
             aes.Key = Encoding.UTF8.GetBytes(_key);
@@ -142,8 +117,7 @@ namespace JJ4Unity.Runtime.AssetBundle
             using var cryptoStream = new CryptoStream(encryptedStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
             var decryptedStream = new MemoryStream();
             cryptoStream.CopyTo(decryptedStream);
-            decryptedStream.Seek(0, SeekOrigin.Begin);
-            return decryptedStream;
+            return decryptedStream.ToArray();
         }
     }
 }
