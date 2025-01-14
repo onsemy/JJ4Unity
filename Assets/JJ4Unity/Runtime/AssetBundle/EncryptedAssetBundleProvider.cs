@@ -120,7 +120,6 @@ namespace JJ4Unity.Runtime.AssetBundle
 
             var decryptedStream = new MemoryStream();
             cryptoStream.CopyTo(decryptedStream);
-            cryptoStream.FlushFinalBlock();
             decryptedStream.Seek(0, SeekOrigin.Begin);
 
             return decryptedStream;
