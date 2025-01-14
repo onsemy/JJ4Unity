@@ -13,6 +13,8 @@ namespace JJ4Unity.Runtime.AssetBundle
     {
         private readonly string _key; // 16바이트
         private readonly string _iv; // 16바이트
+        
+        private StreamDownloadHandler _downloadHandler;
 
         public EncryptedAssetBundleProvider(string key, string iv)
         {
@@ -45,13 +47,15 @@ namespace JJ4Unity.Runtime.AssetBundle
 
         private void ProvideFromJarFile(ProvideHandle provideHandle, string internalId)
         {
-            var streamDownloadHandler = new StreamDownloadHandler();
+            _downloadHandler = new StreamDownloadHandler();
+            
             var request = new UnityWebRequest(
                 internalId,
                 UnityWebRequest.kHttpVerbGET,
-                streamDownloadHandler,
+                _downloadHandler,
                 null
             );
+            
             request.SendWebRequest().completed += _ =>
             {
                 if (request.result != UnityWebRequest.Result.Success)
@@ -64,12 +68,15 @@ namespace JJ4Unity.Runtime.AssetBundle
 
                 try
                 {
-                    var stream = streamDownloadHandler.GetStream();
+                    var stream = _downloadHandler.GetStream();
                     DecryptBundle(provideHandle, stream);
                 }
                 finally
                 {
                     request.Dispose();
+                    
+                    _downloadHandler?.Dispose();
+                    _downloadHandler = null;
                 }
             };
         }
