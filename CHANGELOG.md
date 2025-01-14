@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.3] - 2025-01-15
+
+- EncryptedAssetBundleProvider에서 UnityWebRequest.DownloadHandler를 기본 설정으로 쓰도록 변경
+- DecryptedBundleResource에 임시 저장용 Stream을 설정할 수 있도록 추가
+- 쓰지 않는 코드 정리
+
 ## [0.1.2] - 2025-01-15
 
 - EncryptedAssetBundleProvider에서 특정 상황에 예외가 발생하는 문제 수정
