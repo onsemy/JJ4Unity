@@ -89,6 +89,11 @@ namespace JJ4Unity.Runtime.AssetBundle
             {
                 decryptedStream = DecryptDataToMemoryStream(stream);
 
+                if (false == decryptedStream.CanRead || false == decryptedStream.CanSeek)
+                {
+                    throw new Exception($"Decrypted stream can not readable or seekable - CanRead={decryptedStream.CanRead}, CanSeek={decryptedStream.CanSeek}");
+                }
+
                 var bundle = UnityEngine.AssetBundle.LoadFromStream(decryptedStream);
                 var assetBundleResource = new DecryptedBundleResource(bundle);
                 provideHandle.Complete(assetBundleResource, true, null);
@@ -115,12 +120,12 @@ namespace JJ4Unity.Runtime.AssetBundle
             aes.Padding = PaddingMode.PKCS7;
             aes.Mode = CipherMode.CBC;
 
-            using var cryptoStream =
-                new CryptoStream(encryptedStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
-
             var decryptedStream = new MemoryStream();
-            cryptoStream.CopyTo(decryptedStream);
-            decryptedStream.Seek(0, SeekOrigin.Begin);
+            using (var cryptoStream = new CryptoStream(encryptedStream, aes.CreateDecryptor(), CryptoStreamMode.Read))
+            {
+                cryptoStream.CopyTo(decryptedStream);
+                decryptedStream.Seek(0, SeekOrigin.Begin);
+            }
 
             return decryptedStream;
         }
