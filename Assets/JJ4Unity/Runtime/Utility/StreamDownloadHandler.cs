@@ -39,7 +39,7 @@ namespace JJ4Unity.Runtime.Utility
         public override void Dispose()
         {
             base.Dispose();
-            _stream?.Dispose();
+            _stream.Dispose();
         }
     }
 }

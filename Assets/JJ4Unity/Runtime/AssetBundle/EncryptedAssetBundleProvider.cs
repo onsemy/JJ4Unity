@@ -3,7 +3,6 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using JJ4Unity.Runtime.Extension;
-using JJ4Unity.Runtime.Utility;
 using UnityEngine.Networking;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -17,7 +16,7 @@ namespace JJ4Unity.Runtime.AssetBundle
         private readonly string _key; // 16바이트
         private readonly string _iv; // 16바이트
         private readonly bool _useStream;
-        private DownloadHandler _downloadHandler;
+        // private DownloadHandler _downloadHandler;
         
         #endregion
 
@@ -72,16 +71,18 @@ namespace JJ4Unity.Runtime.AssetBundle
 
         private void ProvideFromJarFile(ProvideHandle provideHandle, string internalId)
         {
-            _downloadHandler = _useStream
-                ? new StreamDownloadHandler()
-                : new DownloadHandlerBuffer();
+            // _downloadHandler = _useStream
+            //     ? new StreamDownloadHandler()
+            //     : new DownloadHandlerBuffer();
+
+            // var request = new UnityWebRequest(
+            //     internalId
+            //     UnityWebRequest.kHttpVerbGET,
+            //     _downloadHandler,
+            //     null
+            // );
             
-            var request = new UnityWebRequest(
-                internalId,
-                UnityWebRequest.kHttpVerbGET,
-                _downloadHandler,
-                null
-            );
+            var request = UnityWebRequest.Get(internalId);
             
             request.SendWebRequest().completed += _ =>
             {
@@ -95,9 +96,10 @@ namespace JJ4Unity.Runtime.AssetBundle
 
                 try
                 {
-                    if (_useStream && _downloadHandler is StreamDownloadHandler stream)
+                    if (_useStream)
                     {
-                        DecryptBundle(provideHandle, stream.GetStream());
+                        var stream = new MemoryStream(request.downloadHandler.data);
+                        DecryptBundle(provideHandle, stream);
                     }
                     else
                     {
@@ -117,8 +119,11 @@ namespace JJ4Unity.Runtime.AssetBundle
             try
             {
                 using var decryptedStream = DecryptToStream(stream);
-                var bundle = UnityEngine.AssetBundle.LoadFromStream(decryptedStream);
-                var assetBundleResource = new DecryptedBundleResource(bundle);
+                var copiedStream = new MemoryStream();
+                decryptedStream.CopyTo(copiedStream);
+                
+                var bundle = UnityEngine.AssetBundle.LoadFromStream(copiedStream);
+                var assetBundleResource = new DecryptedBundleResource(bundle, copiedStream);
                 provideHandle.Complete(assetBundleResource, true, null);
             }
             catch (CryptographicException e)
@@ -158,7 +163,11 @@ namespace JJ4Unity.Runtime.AssetBundle
             aes.Padding = PaddingMode.PKCS7;
             aes.Mode = CipherMode.CBC;
 
-            var cryptoStream = new CryptoStream(encryptedStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
+            var cryptoStream = new CryptoStream(
+                encryptedStream,
+                aes.CreateDecryptor(),
+                CryptoStreamMode.Read
+            );
             return cryptoStream;
         }
 
