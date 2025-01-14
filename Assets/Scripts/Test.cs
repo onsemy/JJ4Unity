@@ -31,7 +31,8 @@ public class Test : MonoBehaviour
         Addressables.ResourceManager.ResourceProviders.Add(
             new EncryptedAssetBundleProvider(
                 "1234567890abcdef", // NOTE(JJO): AES Key, IV는 따로 관리하는 것을 추천
-                "1234567890abcdef"
+                "1234567890abcdef",
+                useStream: true
             )
         );
 

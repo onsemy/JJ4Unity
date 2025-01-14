@@ -39,7 +39,8 @@ JJ4Unity는 다음 환경에서 정상 동작하도록 개발하고 있습니다
 > Addressables.ResourceManager.ResourceProviders.Add(
 >     new EncryptedAssetBundleProvider(
 >         key: "1234567890abcdef",
->         iv: "1234567890abcdef"
+>         iv: "1234567890abcdef",
+>         useStream: true
 >     )
 > );
 >

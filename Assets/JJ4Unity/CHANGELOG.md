@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.2] - 2025-01-15
+
+- EncryptedAssetBundleProvider에서 특정 상황에 예외가 발생하는 문제 수정
+- EncryptedAssetBundleProvider 사용 시 Stream과 Byte 배열 로드 방식을 선택 가능하도록 작업
+- 암호화 번들이 Addressables.Release에도 메모리에서 해제되지 않는 문제 수정
+
 ## [0.1.1] - 2025-01-07
 
 - 쓰지 않는 코드 정리

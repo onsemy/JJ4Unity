@@ -23,7 +23,7 @@ namespace JJ4Unity.Runtime.AssetBundle
 
         #region Constructor
         
-        public EncryptedAssetBundleProvider(string key, string iv, bool useStream = false)
+        public EncryptedAssetBundleProvider(string key, string iv, bool useStream)
         {
             _key = key;
             _iv = iv;
