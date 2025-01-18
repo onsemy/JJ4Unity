@@ -50,7 +50,6 @@ namespace JJ4Unity.Runtime.Core
             DontDestroyOnLoad(gameObject);
         }
 
-#if !UNITY_EDITOR
 		private static bool _applicationQuit = false;
 
 		private void OnApplicationQuit()
@@ -61,7 +60,7 @@ namespace JJ4Unity.Runtime.Core
 		private void OnDestroy()
 		{
 			_applicationQuit = true;
+			_instance = null;
 		}
-#endif
     }
 }
